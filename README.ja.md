@@ -4,6 +4,8 @@
 
 `Ray.MediaQuery`はDBやWeb APIなどの外部メディアのクエリーのインターフェイスから、クエリー実行オブジェクトを生成しインジェクトします。
 
+## モチベーション
+
 * ドメイン層とインフラ層の境界を明確にします。
 * ボイラープレートコードを削減します。
 * 外部メディアの実体には無関係なので、後からストレージを変更することができます。並列開発やスタブ作成が容易です。
@@ -249,11 +251,12 @@ $this->bind(DateTimeInterface::class)->to(UnixEpochTime::class);
 
 ### VO
 
-`DateTime`以外のバリューオブジェクトが渡されると`toScalar`インターフェイスを実装した`ToScalar()`メソッド、もしくは`__toString()`メソッドの返り値が引数になります。
+`DateTime`以外のバリューオブジェクトが渡されると`ToScalar`インターフェイスを実装した`toScalar()`メソッド、もしくは`__toString()`メソッドの返り値が引数になります。
 
 ```php
 interface MemoAddInterface
 {
+    #[DbQuery('memo_add')]
     public function __invoke(string $memo, UserId $userId = null): void;
 }
 ```
@@ -273,7 +276,7 @@ class UserId implements ToScalarInterface
 ```
 
 ```sql
-INSERT INTO memo (user_id, memo) VALUES (:user_id, :memo);
+INSERT INTO memo (user_id, memo) VALUES (:userId, :memo);
 ```
 
 ### パラメーターインジェクション
@@ -293,14 +296,14 @@ use Ray\MediaQuery\PagesInterface;
 
 interface TodoList
 {
-    #[DbQuery, Pager(perPage: 10, template: '/{?page}')]
+    #[DbQuery('todo_list'), Pager(perPage: 10, template: '/{?page}')]
     public function __invoke(): Pages;
 }
 ```
 
 ページ毎のアイテム数をperPageで指定しますが、動的な値の場合は以下のようにページ数を表す引数の名前を文字列を指定します。
 ```php
-    #[DbQuery, Pager(perPage: 'pageNum', template: '/{?page}')]
+    #[DbQuery('todo_list'), Pager(perPage: 'pageNum', template: '/{?page}')]
     public function __invoke($pageNum): Pages;
 ```
 
@@ -324,7 +327,7 @@ $page = $pages[2]; // 配列アクセスをした時にそのページのDBク�
 エンティティクラスにハイドレーションを行うときは`@return`で指定します。
 
 ```php
-    #[DbQuery, Pager(perPage: 'pageNum', template: '/{?page}')]
+    #[DbQuery('todo_list'), Pager(perPage: 'pageNum', template: '/{?page}')]
     /** @return array<Todo> */
     public function __invoke($pageNum): Pages;
 ```
