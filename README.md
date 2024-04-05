@@ -237,6 +237,7 @@ For example, you can specify a `DateTimeInterface` object like this.
 ```php
 interface TaskAddInterface
 {
+    #[DbQuery('task_add')]
     public function __invoke(string $title, DateTimeInterface $cratedAt = null): void;
 }
 ```
@@ -260,11 +261,12 @@ $this->bind(DateTimeInterface::class)->to(UnixEpochTime::class);
 
 ## VO
 
-If a value object other than `DateTime` is passed, the return value of the `ToScalar()` method that implements the `toScalar` interface or the `__toString()` method will be the argument.
+If a value object other than `DateTime` is passed, the return value of the `toScalar()` method that implements the `ToScalar` interface or the `__toString()` method will be the argument.
 
 ```php
 interface MemoAddInterface
 {
+    #[DbQuery('memo_add')]
     public function __invoke(string $memo, UserId $userId = null): void;
 }
 ```
@@ -284,7 +286,7 @@ class UserId implements ToScalarInterface
 ```
 
 ```sql
-INSERT INTO memo (user_id, memo) VALUES (:user_id, :memo);
+INSERT INTO memo (user_id, memo) VALUES (:userId, :memo);
 ```
 
 ### Parameter Injection
@@ -304,7 +306,7 @@ use Ray\MediaQuery\PagesInterface;
 
 interface TodoList
 {
-    #[DbQuery, Pager(perPage: 10, template: '/{?page}')]
+    #[DbQuery('todo_list'), Pager(perPage: 10, template: '/{?page}')]
     public function __invoke(): PagesInterface;
 }
 ```
@@ -315,7 +317,7 @@ You can get the number of pages with `count()`, and you can get the page object 
 The number of items per page is specified by `perPage`, but for dynamic values, specify a string with the name of the argument representing the number of pages as follows
 
 ```php
-    #[DbQuery, Pager(perPage: 'pageNum', template: '/{?page}')]
+    #[DbQuery('todo_list'), Pager(perPage: 'pageNum', template: '/{?page}')]
     public function __invoke($pageNum): Pages;
 ```
 
@@ -336,20 +338,29 @@ $page = $pages[2]; // A page query is executed when an array access is made.
 Use `@return` to specify hydration to the entity class.
 
 ```php
-    #[DbQuery, Pager(perPage: 'pageNum', template: '/{?page}')]
+    #[DbQuery('todo_list'), Pager(perPage: 'pageNum', template: '/{?page}')]
     /** @return array<Todo> */
     public function __invoke($pageNum): Pages;
 ```
 
 # SqlQuery
 
-If you pass a `DateTimeIntetface` object, it will be converted to a date formatted string and queried.
+`SqlQuery` executes SQL by specifying the ID of the SQL file.
+It is used when detailed implementations with an implementation class.
 
 ```php
-$sqlQuery->exec('memo_add', ['memo' => 'run', 'created_at' => new DateTime()]);
-```
+class TodoItem implements TodoItemInterface
+{
+    public function __construct(
+        private SqlQueryInterface $sqlQuery
+    ){}
 
-When an object is passed, it is converted to a value of `toScalar()` or `__toString()` as in Parameter Injection.
+    public function __invoke(string $id) : array
+    {
+        return $this->sqlQuery->getRow('todo_item', ['id' => $id]);
+    }
+}
+```
 
 ## Get* Method
 
